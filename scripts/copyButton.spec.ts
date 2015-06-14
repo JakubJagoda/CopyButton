@@ -3,13 +3,11 @@
 'use strict';
 
 describe('Component: copyButton', () => {
-    let copyButtonInstance: CopyButton;
-    let element: HTMLButtonElement;
-    //let $element:JQuery;
+    let copyButtonInstance:CopyButton;
+    let element:HTMLButtonElement;
 
     beforeEach(() => {
         element = document.createElement('button');
-        //$element = $(element);
     });
 
     describe('Instantiation', () => {
@@ -62,6 +60,7 @@ describe('Component: copyButton', () => {
             beforeEach(() => {
                 _ZeroClipboard = ZeroClipboard;
                 _clipboardData = window.clipboardData;
+                window.$$CopyButtonUserscriptEnabled = false;
 
                 window['ZeroClipboard'] = undefined;
             });
@@ -71,7 +70,19 @@ describe('Component: copyButton', () => {
                 window.clipboardData = _clipboardData;
             });
 
-            it('should copy text on click using clipboardData as first method', () => {
+            it('should copy text on click using userscript as first method', () => {
+                window.$$CopyButtonUserscriptEnabled = true;
+                const locationOrigin = location.protocol + "//" + location.hostname + (location.port ? ':' + location.port : '');
+                spyOn(window, 'postMessage');
+                copyButtonInstance = new CopyButton(element);
+                copyButtonInstance.setCopyData('abc');
+                element.click();
+                expect(window.postMessage).toHaveBeenCalledWith({
+                    $$CopyButtonDataToCopy: 'abc'
+                }, locationOrigin);
+            });
+
+            it('should copy text on click using clipboardData if userscript is not available', () => {
                 window.clipboardData = jasmine.createSpyObj('', ['setData']);
                 copyButtonInstance = new CopyButton(element);
                 copyButtonInstance.setCopyData('abc');
@@ -79,7 +90,7 @@ describe('Component: copyButton', () => {
                 expect(window.clipboardData.setData).toHaveBeenCalledWith('Text', 'abc')
             });
 
-            it('should copy text on click using document.execCommand as second method', () => {
+            it('should copy text on click using document.execCommand if clipboardData is not available', () => {
                 window.clipboardData = undefined;
                 spyOn(document, 'queryCommandSupported').and.returnValue(true);
                 spyOn(document, 'execCommand').and.returnValue(true);

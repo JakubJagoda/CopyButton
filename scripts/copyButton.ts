@@ -1,24 +1,27 @@
 ///<reference path="../typings/tsd.d.ts" />
 'use strict';
 
-//this is a Microsoft extension, IE specific
 interface Window {
+    //this is a Microsoft extension, IE specific
     clipboardData?: any;
+    //this is property set by copyButton addon
+    $$CopyButtonUserscriptEnabled?: boolean;
 }
 
 const enum COPY_METHOD {
+    USERSCRIPT,
     CLIPBOARD_DATA,
     DOCUMENT_EXECCOMMAND
 }
 
 class CopyButton {
-    private copyData: string;
-    private element: HTMLElement;
-    private zeroClipboardClient: ZeroClipboard;
+    private copyData:string;
+    private element:HTMLElement;
+    private zeroClipboardClient:ZeroClipboard;
 
-    constructor(element: HTMLElement) {
+    constructor(element:HTMLElement) {
         this.element = element;
-        if(typeof ZeroClipboard !== 'undefined') {
+        if (typeof ZeroClipboard !== 'undefined') {
             this.installZeroClipboard();
             this.zeroClipboardClient.on('error', () => {
                 //ugly hack, but this is missing from the typings and this is the quickest hotfix
@@ -47,10 +50,12 @@ class CopyButton {
         return this.copyData;
     }
 
-    private copy(str: string):void {
-        let chosenCopyMethod: COPY_METHOD;
+    private copy(str:string):void {
+        let chosenCopyMethod:COPY_METHOD;
 
-        if (window.clipboardData && window.clipboardData.setData) {
+        if (window.$$CopyButtonUserscriptEnabled) {
+            chosenCopyMethod = COPY_METHOD.USERSCRIPT;
+        } else if (window.clipboardData && window.clipboardData.setData) {
             chosenCopyMethod = COPY_METHOD.CLIPBOARD_DATA;
         } else if (document.execCommand && document.queryCommandSupported('copy')) {
             chosenCopyMethod = COPY_METHOD.DOCUMENT_EXECCOMMAND;
@@ -62,17 +67,17 @@ class CopyButton {
         this.COPY_FUNCTIONS[chosenCopyMethod](str);
     }
 
-    public setCopyData(str: string) {
+    public setCopyData(str:string) {
         this.copyData = str;
     }
 
-    private COPY_FUNCTIONS: {
+    private COPY_FUNCTIONS:{
         [index: number]: (string) => void;
     } = {
-        [COPY_METHOD.CLIPBOARD_DATA]: (str: string) => {
+        [COPY_METHOD.CLIPBOARD_DATA]: (str:string) => {
             window.clipboardData.setData('Text', str);
         },
-        [COPY_METHOD.DOCUMENT_EXECCOMMAND]: (str: string) => {
+        [COPY_METHOD.DOCUMENT_EXECCOMMAND]: (str:string) => {
             const span = document.createElement('span');
             span.innerHTML = str;
             document.body.appendChild(span);
@@ -85,6 +90,13 @@ class CopyButton {
 
             window.getSelection().removeAllRanges();
             document.body.removeChild(span);
+        },
+        [COPY_METHOD.USERSCRIPT]: (str:string) => {
+            //can't use location.origin as it's too much fresh API
+            const locationOrigin = location.protocol + "//" + location.hostname + (location.port ? ':' + location.port : '');
+            window.postMessage({
+                $$CopyButtonDataToCopy: str
+            }, locationOrigin);
         }
     }
 }
