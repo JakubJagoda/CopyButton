@@ -11,6 +11,9 @@
     "es6-shim/es6-shim.d.ts": {
       "commit": "4408b656fab59a4e7f871da2f492311eedc9bdcd"
     },
+    "zeroclipboard/zeroclipboard.d.ts": {
+      "commit": "4408b656fab59a4e7f871da2f492311eedc9bdcd"
+    },
     "jasmine/jasmine.d.ts": {
       "commit": "4408b656fab59a4e7f871da2f492311eedc9bdcd"
     }

@@ -1,6 +1,7 @@
 ///<reference path="../typings/tsd.d.ts" />
 'use strict';
 
+//this is a Microsoft extension, IE specific
 interface Window {
     clipboardData?: any;
 }
@@ -11,20 +12,61 @@ const enum COPY_METHOD {
 }
 
 class CopyButton {
-    public copy: (str: string) => void; //this will be replaced by actual implementation chosen basing on available api
-    constructor() {
-        this.chooseCopyMethod();
-    }
+    private copyData: string;
+    private element: HTMLElement;
+    private zeroClipboardClient: ZeroClipboard;
 
-    chooseCopyMethod():void {
-        if (window.clipboardData && window.clipboardData.getData && window.clipboardData.setData) {
-            this.copy = CopyButton.COPY_FUNCTIONS[COPY_METHOD.CLIPBOARD_DATA];
-        } else if (document.execCommand && document.queryCommandSupported('copy')) {
-            this.copy = CopyButton.COPY_FUNCTIONS[COPY_METHOD.DOCUMENT_EXECCOMMAND];
+    constructor(element: HTMLElement) {
+        this.element = element;
+        if(typeof ZeroClipboard !== 'undefined') {
+            this.installZeroClipboard();
+            this.zeroClipboardClient.on('error', () => {
+                //ugly hack, but this is missing from the typings and this is the quickest hotfix
+                (<any>this.zeroClipboardClient).destroy();
+                this.installCustomCopyMethod();
+            });
+        } else {
+            this.installCustomCopyMethod();
         }
     }
 
-    private static COPY_FUNCTIONS: {
+    private installZeroClipboard():void {
+        this.zeroClipboardClient = new ZeroClipboard(this.element);
+        this.zeroClipboardClient.on('copy', (e) => {
+            e.clipboardData.setData('text/plain', this.getDataToCopy());
+        });
+    }
+
+    private installCustomCopyMethod():void {
+        this.element.addEventListener('click', () => {
+            this.copy(this.getDataToCopy());
+        });
+    }
+
+    private getDataToCopy():string {
+        return this.copyData;
+    }
+
+    private copy(str: string):void {
+        let chosenCopyMethod: COPY_METHOD;
+
+        if (window.clipboardData && window.clipboardData.setData) {
+            chosenCopyMethod = COPY_METHOD.CLIPBOARD_DATA;
+        } else if (document.execCommand && document.queryCommandSupported('copy')) {
+            chosenCopyMethod = COPY_METHOD.DOCUMENT_EXECCOMMAND;
+        } else {
+            //@todo add other methods
+            throw new Error('No available copy API');
+        }
+
+        this.COPY_FUNCTIONS[chosenCopyMethod](str);
+    }
+
+    public setCopyData(str: string) {
+        this.copyData = str;
+    }
+
+    private COPY_FUNCTIONS: {
         [index: number]: (string) => void;
     } = {
         [COPY_METHOD.CLIPBOARD_DATA]: (str: string) => {

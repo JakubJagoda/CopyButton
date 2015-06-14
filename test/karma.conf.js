@@ -19,17 +19,17 @@ module.exports = function(config) {
         // list of files / patterns to load in the browser
         files: [
             'bower_components/jquery/dist/jquery.js',
-            'scripts/*.ts'
+            'bower_components/zeroclipboard/dist/ZeroClipboard.js',
+            'scripts/copyButton.ts',
+            'scripts/copyButton.spec.ts'
         ],
 
         // list of files / patterns to exclude
         exclude: [
-            //some garbage files added by typescript preprocessor
-            '**/*.ktp.ts'
         ],
 
         // web server port
-        port: 8080,
+        port: 9101,
 
         // Start these browsers, currently available:
         // - Chrome
